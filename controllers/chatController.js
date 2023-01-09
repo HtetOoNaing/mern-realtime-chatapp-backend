@@ -47,7 +47,12 @@ const accessChat = asyncHandler(async (req, res) => {
 
 const fetchChats = asyncHandler(async (req, res) => {
   try {
-    Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
+    Chat.find({
+      $or: [
+        { users: { $elemMatch: { $eq: req.user._id } } },
+        { groupAdmin: req.user._id },
+      ],
+    })
       .populate("users", "-password")
       .populate("latestMessage")
       .populate("groupAdmin", "-password")
@@ -103,7 +108,6 @@ const updateGroupChat = asyncHandler(async (req, res) => {
       .status(400)
       .send("More than 2 users are required to form a group chat");
   }
-
   try {
     const updatedChat = await Chat.findByIdAndUpdate(
       req.params.id,
