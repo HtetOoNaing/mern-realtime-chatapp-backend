@@ -75,7 +75,6 @@ const createGroupChat = asyncHandler(async (req, res) => {
       .status(400)
       .send("More than 2 users are required to form a group chat");
   }
-  users.push(req.user);
   try {
     const groupChat = await Chat.create({
       chatName: req.body.name,
@@ -86,7 +85,48 @@ const createGroupChat = asyncHandler(async (req, res) => {
     const fullGroupChat = await Chat.findOne({ _id: groupChat._id })
       .populate("users", "-password")
       .populate("groupAdmin", "-password");
+
     res.status(200).json(fullGroupChat);
+  } catch (error) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+});
+
+const updateGroupChat = asyncHandler(async (req, res) => {
+  if (!req.body.users || !req.body.name) {
+    return res.status(400).send({ message: "Please fill all the fields" });
+  }
+  let users = JSON.parse(req.body.users);
+  if (users.length < 2) {
+    return res
+      .status(400)
+      .send("More than 2 users are required to form a group chat");
+  }
+
+  try {
+    const updatedChat = await Chat.findByIdAndUpdate(
+      req.params.id,
+      {
+        chatName: req.body.name,
+        users: users,
+      },
+      { new: true }
+    )
+      .populate("users", "-password")
+      .populate("groupAdmin", "-password")
+      .populate("latestMessage");
+
+    const fullGroupChat = await User.populate(updatedChat, {
+      path: "latestMessage.sender",
+      select: "name pic email",
+    });
+    if (!fullGroupChat) {
+      res.status(404);
+      throw new Error("Chat Not Found");
+    } else {
+      res.json(updatedChat);
+    }
   } catch (error) {
     res.status(400);
     throw new Error(error.message);
@@ -155,6 +195,7 @@ module.exports = {
   accessChat,
   fetchChats,
   createGroupChat,
+  updateGroupChat,
   renameGroup,
   addToGroup,
   removeFromGroup,
