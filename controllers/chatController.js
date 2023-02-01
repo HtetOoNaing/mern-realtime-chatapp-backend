@@ -1,9 +1,10 @@
 const asyncHandler = require("express-async-handler");
 const Chat = require("../models/chat");
 const User = require("../models/user");
+const crypto = require("crypto");
 
 const accessChat = asyncHandler(async (req, res) => {
-  const { userId } = req.body;
+  const { userId, publicKey } = req.body;
   if (!userId) {
     console.log("UserId params not sent with request");
     return res.sendStatus(400);
@@ -26,10 +27,22 @@ const accessChat = asyncHandler(async (req, res) => {
   if (isChat.length > 0) {
     res.send(isChat[0]);
   } else {
+    const pvk = JSON.parse(req.user.privateKey);
+    console.log("pvk", pvk);
+    const BufferPvk = Buffer.from(pvk.data);
+    console.log("BufferPvk", BufferPvk);
+    const ecdh = crypto.createECDH("secp521r1");
+    ecdh.setPrivateKey(BufferPvk);
+    const parsedPbk = JSON.parse(publicKey)
+    const BufferPbk = Buffer.from(parsedPbk.data)
+    const passphrase = ecdh.computeSecret(BufferPbk).toString("hex");
+    console.log("passphrase", passphrase);
+
     let chatData = {
       chatName: "sender",
       isGroupChat: false,
       users: [req.user._id, userId],
+      passphrase,
     };
     try {
       const createdChat = await Chat.create(chatData);

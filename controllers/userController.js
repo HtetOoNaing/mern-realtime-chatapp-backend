@@ -1,6 +1,7 @@
 const asyncHandler = require("express-async-handler");
 const generateToken = require("../config/generateToken");
 const User = require("../models/user");
+const crypto = require("crypto");
 
 const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password, pic } = req.body;
@@ -13,12 +14,18 @@ const registerUser = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("User already exists");
   }
-
+  const ecdh = crypto.createECDH("secp521r1");
+  const publicKey = JSON.stringify(ecdh.generateKeys());
+  const privateKey = JSON.stringify(ecdh.getPrivateKey());
+  console.log("publicKey", publicKey);
+  console.log("privateKey", privateKey);
   const user = await User.create({
     name,
     email,
     password,
     pic,
+    publicKey,
+    privateKey,
   });
   if (user) {
     res.status(201).json({
@@ -27,6 +34,8 @@ const registerUser = asyncHandler(async (req, res) => {
       email: user.email,
       pic: user.pic,
       token: generateToken(user._id),
+      publicKey: user.publicKey,
+      privateKey: user.privateKey,
     });
   } else {
     res.status(400);
@@ -62,7 +71,7 @@ const allUsers = asyncHandler(async (req, res) => {
       }
     : {};
   const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
-  res.send(users)
+  res.send(users);
 });
 
 module.exports = { registerUser, authUser, allUsers };
