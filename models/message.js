@@ -11,6 +11,10 @@ const messageSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chat",
     },
+    isSecure: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
