@@ -13,6 +13,7 @@ const userSchema = mongoose.Schema(
     },
     publicKey: String,
     privateKey: String,
+    socketId: String,
   },
   {
     timestamps: true,

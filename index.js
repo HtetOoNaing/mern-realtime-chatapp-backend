@@ -5,14 +5,14 @@ const connectDB = require("./config/db");
 const userRoutes = require("./routes/userRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
-const cors = require("cors")
+const cors = require("cors");
 
 const { notFound, errorHandler } = require("./middlewares/errorMiddleware");
 
 dotenv.config();
 connectDB();
 const app = express();
-app.use(cors())
+app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -31,8 +31,8 @@ const server = app.listen(PORT, console.log(`Server started on PORT ${PORT}`));
 const io = require("socket.io")(server, {
   pingTimeOut: 60000,
   cors: {
-    origin: "http://localhost:3000",
-    // origin: "https://hybridchat.onrender.com",
+    // origin: "http://localhost:3000",
+    origin: "https://hybridchat.onrender.com",
   },
 });
 
@@ -60,6 +60,29 @@ io.on("connection", (socket) => {
       socket.in(user._id).emit("message received", newMessageReceived);
     });
   });
+
+  //video call
+
+  socket.emit("me", socket.id)
+
+  socket.on("callUser", (data) => {
+    console.log("callUser", data)
+    io.to(data.userToCall).emit("callUser", {
+      signal: data.signalData,
+      from: data.from,
+      name: data.name,
+      stream: data.stream
+    });
+  });
+
+  socket.on("answerCall", (data) =>
+    io.to(data.to).emit("callAccepted", data.signal)
+  );
+
+  socket.on("disconnect", () => {
+    socket.broadcast.emit("callEnded");
+  });
+
   socket.off("setup", () => {
     console.log("User Disconnected");
     socket.leave(userData._id);
